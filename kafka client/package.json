@@ -1,0 +1,21 @@
+{
+  "name": "kafta-producer",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "producer": "node kafkaProducer.js",
+    "consumer": "node kafkaConsumer.js",
+    "start": "concurrently \"npm run producer\" \"npm run consumer\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

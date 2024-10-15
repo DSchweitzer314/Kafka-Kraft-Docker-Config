@@ -1,0 +1,118 @@
+#volumes are used to presist data generated/used by Docker containers
+#broker1 starts with no data, grafana starts with some default data ({})
+volumes:
+  broker1:
+  broker2:
+  broker3:
+  grafana: {}
+
+#service refers to container(s) being defined in this file
+services:
+  broker1:
+    image: 'bitnami/kafka:latest'
+    environment:
+      KAFKA_ENABLE_KRAFT: yes
+      #crucial for Kraft mode - it tells Kafka process to assume both broker and  controller role
+      #CFG stands for configuration
+      KAFKA_CFG_PROCESS_ROLES: 'broker,controller'
+      #controller is responsible for managing cluster's metadata and overseeing partition leader elections
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      #9092 is used for client connection, traffic between producer/cosumers
+      #9093 is used for internal communication between Kafka brokers
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9999
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT #both controller and listeners use PLAINTEXT
+      #advertised_listeners environment variable is used to define how the Kafka broker advertises its listeners to clients(producers and consumers)
+      #in simpler words, this is Kafka saying: if you want to connect to this broker, use this endpoint
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: '1@broker1:9999, 2@broker2:9999, 3@broker3:9999'
+      KAFKA_CFG_BROKER_ID: 1 #this is required in Kraft mode
+      KAFKA_NODE_ID: '1'
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_KRAFT_CLUSTER_ID: r4zt_wrqTRuT7W2NJsB_GA
+      KAFKA_JMX_PORT: 5555
+      KAFKA_OPTS: '-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar=5557:/opt/jmx_exporter/jmx_exporter_config.yml'
+    volumes:
+      - broker1:/bitnami/kafka
+      - ./jmx_prometheus_javaagent-1.0.1.jar:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar
+      - ./jmx_exporter_config.yml:/opt/jmx_exporter/jmx_exporter_config.yml
+    ports:
+      - '5557:5557'
+      - '9092:9092'
+
+  broker2:
+    image: 'bitnami/kafka:latest'
+    environment:
+      KAFKA_ENABLE_KRAFT: yes
+      KAFKA_CFG_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9093,CONTROLLER://:9999
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9093
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: '1@broker1:9999, 2@broker2:9999, 3@broker3:9999'
+      KAFKA_CFG_BROKER_ID: 2
+      KAFKA_NODE_ID: '2'
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_KRAFT_CLUSTER_ID: r4zt_wrqTRuT7W2NJsB_GA
+      KAFKA_JMX_PORT: 5555
+      KAFKA_OPTS: '-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar=5558:/opt/jmx_exporter/jmx_exporter_config.yml'
+    volumes:
+      - broker2:/bitnami/kafka
+      - ./jmx_prometheus_javaagent-1.0.1.jar:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar
+      - ./jmx_exporter_config.yml:/opt/jmx_exporter/jmx_exporter_config.yml
+    ports:
+      - '5558:5557'
+      - '9093:9093'
+
+  broker3:
+    image: 'bitnami/kafka:latest'
+    environment:
+      KAFKA_ENABLE_KRAFT: yes
+      KAFKA_CFG_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9094,CONTROLLER://:9999
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: '1@broker1:9999, 2@broker2:9999, 3@broker3:9999'
+      KAFKA_CFG_BROKER_ID: 3
+      KAFKA_NODE_ID: '3'
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_KRAFT_CLUSTER_ID: r4zt_wrqTRuT7W2NJsB_GA
+      KAFKA_JMX_PORT: 5555
+      KAFKA_OPTS: '-javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar=5559:/opt/jmx_exporter/jmx_exporter_config.yml'
+    volumes:
+      - broker3:/bitnami/kafka
+      - ./jmx_prometheus_javaagent-1.0.1.jar:/opt/jmx_exporter/jmx_prometheus_javaagent-1.0.1.jar
+      - ./jmx_exporter_config.yml:/opt/jmx_exporter/jmx_exporter_config.yml
+    ports:
+      - '5559:5557'
+      - '9094:9094'
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Viewer'
+      GF_SECURITY_ALLOW_EMBEDDING: 'true'
+    container_name: grafana
+    ports:
+      - '3001:3000'
+    volumes:
+      - grafana:/var/lib/grafana
+    depends_on:
+      - prometheus
+#create topic in brokers
+#-stop all container
+#-go inside of the container you want to create a topic in, start a bash session , docker exec -it <container_name> /bin/bash
+#-create a topic, kafka-topics.sh --create --topic <topic_name> --bootstrap-server localhost:PORT --partitions 1 --replication-factor 1
+#-delete a topic, kafka-topics.sh --delete --topic <topic_name> --bootstrap-server localhost:PORT
+#-see a ls of topics, kafka-topics.sh --list --bootstrap-server localhost:PORT
+

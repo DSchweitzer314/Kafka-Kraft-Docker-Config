@@ -1,0 +1,9 @@
+rules:
+  - pattern: 'kafka.*<type=(.+)>(.+)'
+    name: 'kafka_$1_$2'
+    type: GAUGE
+    labels:
+      area: '$1'
+  - pattern: 'kafka.controller<type=(.+)><>(.+)'
+    name: 'kafka_controller_$1'
+    type: GAUGE

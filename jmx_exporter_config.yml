@@ -1,0 +1,6 @@
+rules:
+  - pattern: '.*'
+    name: 'kafka'
+    labels:
+      application: 'kafka'
+    help: 'Kafka JMX metrics'
